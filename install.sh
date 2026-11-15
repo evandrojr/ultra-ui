@@ -104,6 +104,10 @@ hl.unbind("SUPER + LEFT")
 hl.unbind("SUPER + RIGHT")
 o.bind("SUPER + LEFT", "UltraUI: aba anterior", "ultra-ui tab prev")
 o.bind("SUPER + RIGHT", "UltraUI: aba proxima", "ultra-ui tab next")
+hl.unbind("SUPER + UP")
+hl.unbind("SUPER + DOWN")
+o.bind("SUPER + UP", "UltraUI: workspace anterior", "ultra-ui workspace prev")
+o.bind("SUPER + DOWN", "UltraUI: workspace proximo", "ultra-ui workspace next")
 EOF
     log "hypr: binds adicionados"
   fi

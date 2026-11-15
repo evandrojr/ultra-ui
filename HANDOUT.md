@@ -92,13 +92,19 @@ com fallback para a forma legada. O server do herdr não tem
 `HYPRLAND_INSTANCE_SIGNATURE`; o plugin descobre a instância em
 `$XDG_RUNTIME_DIR/hypr` e injeta no subprocess.
 
-## Super+setas e a GUI
+## Super+setas = herdr
 
-O `Super+←/→` é vinculado **no Hyprland** (`~/.config/hypr/bindings.lua`) e
-roda `ultra-ui tab prev|next`, que foca a aba do herdr. O compositor engole a
-tecla, então a janela gráfica focada **não** interpreta o atalho — ela continua
-alternando abas. Isso substitui o binding de foco de janela do Omarchy
-(`hl.unbind("SUPER + LEFT/RIGHT")`).
+Vinculado **no Hyprland** (`~/.config/hypr/bindings.lua`), gerenciado pelo
+`install.sh`:
+
+| Tecla | Ação |
+|---|---|
+| `Super+←` / `Super+→` | aba anterior / próxima (`ultra-ui tab prev|next`) |
+| `Super+↑` / `Super+↓` | workspace anterior / próximo (`ultra-ui workspace prev|next`) |
+
+O compositor engole a tecla, então a janela gráfica focada não interpreta o
+atalho. Isso substitui os bindings de foco de janela do Omarchy
+(`hl.unbind("SUPER + ...")`).
 
 ## Próximos passos
 

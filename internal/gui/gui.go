@@ -346,6 +346,27 @@ func (s *Service) SwitchTab(dir int) error {
 	return herdr.TabFocus(tabs[next].TabID)
 }
 
+// SwitchWorkspace foca o workspace anterior (dir < 0) ou proximo (dir > 0).
+func (s *Service) SwitchWorkspace(dir int) error {
+	ws, err := herdr.Workspaces()
+	if err != nil {
+		return err
+	}
+	if len(ws) == 0 {
+		return fmt.Errorf("nenhum workspace")
+	}
+	current := 0
+	for i, w := range ws {
+		if w.Focused {
+			current = i
+			break
+		}
+	}
+	next := (current + dir + len(ws)) % len(ws)
+	_, err = herdr.Run("workspace", "focus", ws[next].WorkspaceID)
+	return err
+}
+
 // HandleEvent processa os hooks do herdr.
 func (s *Service) HandleEvent(event string) error {
 	debug := os.Getenv("ULTRA_UI_DEBUG") != ""

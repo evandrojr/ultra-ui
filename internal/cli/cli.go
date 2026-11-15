@@ -64,6 +64,18 @@ func Run(args []string) int {
 		default:
 			return fail("tab: prev|next")
 		}
+	case "workspace":
+		if len(rest) == 0 {
+			return fail("workspace: prev|next")
+		}
+		switch rest[0] {
+		case "prev":
+			return wrap(func() error { return mustService().SwitchWorkspace(-1) })
+		case "next":
+			return wrap(func() error { return mustService().SwitchWorkspace(1) })
+		default:
+			return fail("workspace: prev|next")
+		}
 	case "status":
 		return runStatus()
 	case "doctor":
