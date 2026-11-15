@@ -335,7 +335,7 @@ func CloseWindow(address string) error {
 // Float alterna o estado flutuante de uma janela.
 func Float(address string) {
 	if LuaMode() {
-		DispatchSilent("hl.dsp.window.float({ action = \"toggle\", window = " +
+		DispatchSilent("hl.dsp.window.float({ action = \"enable\", window = " +
 			luaString("address:"+address) + " })")
 		return
 	}

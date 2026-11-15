@@ -79,9 +79,10 @@ Verificado de verdade, via SSH com o Hyprland rodando:
   a traz de volta e a foca.
 - `gui close` fecha a janela e limpa o estado.
 
-Limitação conhecida: a âncora automática (sidebar visível) é aproximada — o
-Dolphin ignora em parte `window.move/resize`. Ajuste `sidebar_width_px` se
-precisar; a alternância não depende disso.
+Limitação conhecida: o app pode impor tamanho mínimo (o Dolphin abre com
+803px de largura, um pouco acima dos 683px da área principal). A posição x
+fica exatamente após a sidebar; a largura pode exceder a área principal.
+Ajuste `sidebar_width_px` se precisar.
 
 ## PENDÊNCIA CRÍTICA — Hyprland 0.56.2 (config Lua) — RESOLVIDA
 

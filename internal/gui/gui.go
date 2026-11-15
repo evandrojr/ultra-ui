@@ -156,30 +156,42 @@ func (s *Service) OpenApp(appID, label, cwd string) error {
 	return nil
 }
 
-// raise move a janela para o workspace ativo e a foca.
+// raise move a janela para o workspace do terminal do herdr e a foca.
 func (s *Service) raise(tabID string) error {
 	g, ok := s.st.Get(tabID)
 	if !ok {
 		return nil
 	}
-	ws, err := hypr.ActiveWorkspace()
-	if err != nil {
+	wsName := s.terminalWorkspace()
+	if wsName == "" {
+		ws, err := hypr.ActiveWorkspace()
+		if err != nil {
+			return err
+		}
+		wsName = ws.Name
+	}
+	if err := hypr.FocusWindow(g.WindowAddress, wsName); err != nil {
 		return err
 	}
-	if err := hypr.FocusWindow(g.WindowAddress, ws.Name); err != nil {
-		return err
-	}
-	if s.cfg.Anchor && !g.Anchored {
-		s.anchor(g.WindowAddress)
-		g.Anchored = true
-		s.st.Put(g)
-		s.st.ActiveGUI = tabID
-		s.save()
-	}
+	s.anchor(g.WindowAddress)
+	g.Anchored = true
+	g.HyprWorkspace = wsName
+	s.st.Put(g)
+	s.st.ActiveGUI = tabID
+	s.save()
 	return nil
 }
 
-// anchor posiciona a janela na area principal, preservando a sidebar.
+// terminalWorkspace devolve o workspace do terminal que roda o herdr.
+func (s *Service) terminalWorkspace() string {
+	if term, ok := findTerminalWindow(); ok {
+		return term.Workspace.Name
+	}
+	return ""
+}
+
+// anchor posiciona a janela na area principal do terminal, preservando a
+// sidebar do herdr a esquerda.
 func (s *Service) anchor(address string) {
 	term, ok := findTerminalWindow()
 	x, y, w, h := 0, 0, 0, 0
@@ -200,6 +212,9 @@ func (s *Service) anchor(address string) {
 	hypr.Float(address)
 	hypr.MoveExact(address, x, y)
 	hypr.ResizeExact(address, w, h)
+	// O resize anima/desloca; aguarda assentar e reposiciona.
+	time.Sleep(300 * time.Millisecond)
+	hypr.MoveExact(address, x, y)
 }
 
 // FocusTab trata o evento tab.focused.
