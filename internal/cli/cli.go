@@ -101,6 +101,8 @@ func runGUI(args []string) int {
 		return wrap(func() error { return mustService().OpenApp(appID, label, cwd) })
 	case "close":
 		return wrap(func() error { return mustService().CloseCurrent() })
+	case "anchor":
+		return wrap(func() error { return mustService().AnchorCurrent() })
 	case "detach":
 		return wrap(func() error { return mustService().DetachCurrent() })
 	case "pick":

@@ -19,6 +19,8 @@ type GUITab struct {
 	WindowAddress string `json:"window_address"`
 	WindowClass   string `json:"window_class,omitempty"`
 	Anchored      bool   `json:"anchored,omitempty"`
+	// XpraDisplay > 0 quando a janela roda sob Xpra (mode = "xpra").
+	XpraDisplay int `json:"xpra_display,omitempty"`
 }
 
 // State e o conteudo de <state-dir>/ultra-ui/state.json.

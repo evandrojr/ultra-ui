@@ -15,6 +15,8 @@ type App struct {
 	WindowClass string   `json:"window_class,omitempty"`
 	// Floating força a janela a abrir flutuante (padrao: true para abas GUI).
 	Floating *bool `json:"floating,omitempty"`
+	// Mode: "native" (padrao) ou "xpra" (roda sob Xpra).
+	Mode string `json:"mode,omitempty"`
 }
 
 // Config sao as preferencias persistidas em <config-dir>/ultra-ui.json.
@@ -57,6 +59,9 @@ func Default() Config {
 	add("btop", "btop", "btop", "btop")
 	add("imv", "imv", "imv", "imv")
 	add("lazygit", "lazygit", "lazygit", "lazygit")
+	if _, err := exec.LookPath("xterm"); err == nil {
+		cfg.Apps["xterm"] = App{Label: "XTerm (xpra)", Command: []string{"xterm"}, WindowClass: "XTerm", Mode: "xpra"}
+	}
 	return cfg
 }
 

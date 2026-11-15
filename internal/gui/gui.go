@@ -17,6 +17,7 @@ import (
 	"ultra-ui/internal/herdr"
 	"ultra-ui/internal/hypr"
 	"ultra-ui/internal/state"
+	"ultra-ui/internal/xpra"
 )
 
 type Service struct {
@@ -104,18 +105,44 @@ func (s *Service) OpenApp(appID, label, cwd string) error {
 		return fmt.Errorf("criar aba: %w", err)
 	}
 
-	if err := hypr.Exec(strings.Join(app.Command, " ")); err != nil {
+	xpraDisplay := 0
+	if app.Mode == "xpra" {
+		if !xpra.Available() {
+			_ = herdr.TabClose(tabID)
+			return fmt.Errorf("xpra nao instalado ( pacman -S xpra )")
+		}
+		xpraDisplay = xpra.DisplayFor(tabID)
+		if err := xpra.Start(xpraDisplay, app.Command); err != nil {
+			_ = herdr.TabClose(tabID)
+			return err
+		}
+		if err := xpra.Attach(xpraDisplay); err != nil {
+			xpra.Stop(xpraDisplay)
+			_ = herdr.TabClose(tabID)
+			return err
+		}
+	} else if err := hypr.Exec(strings.Join(app.Command, " ")); err != nil {
 		_ = herdr.TabClose(tabID)
 		return fmt.Errorf("executar %q: %w", app.Command[0], err)
 	}
 
 	var win hypr.Client
 	found := bool(false)
+	wait := 5 * time.Second
+	if xpraDisplay > 0 {
+		wait = 10 * time.Second
+	}
 	// Primeiro procura uma janela genuinamente nova; so entao aceita a classe,
 	// para nao associar uma janela que ja estava aberta.
-	win, found = hypr.WaitNewWindow(before, 5*time.Second)
-	if !found && app.WindowClass != "" {
-		win, found = hypr.WaitClass(app.WindowClass, before, 3*time.Second)
+	if xpraDisplay > 0 && app.WindowClass != "" {
+		// Em modo xpra o attach cria janelas intermediarias; a classe do app e
+		// o identificador confiavel.
+		win, found = hypr.WaitClass(app.WindowClass, before, 12*time.Second)
+	} else {
+		win, found = hypr.WaitNewWindow(before, wait)
+		if !found && app.WindowClass != "" {
+			win, found = hypr.WaitClass(app.WindowClass, before, 3*time.Second)
+		}
 	}
 	if !found {
 		// Ultima tentativa: a janela ativa pode ser a recem-aberta.
@@ -139,6 +166,7 @@ func (s *Service) OpenApp(appID, label, cwd string) error {
 		HyprWorkspace: ws.Name,
 		WindowAddress: win.Address,
 		WindowClass:   win.Class,
+		XpraDisplay:   xpraDisplay,
 	}
 	if g.WindowClass == "" {
 		g.WindowClass = app.WindowClass
@@ -173,13 +201,30 @@ func (s *Service) raise(tabID string) error {
 	if err := hypr.FocusWindow(g.WindowAddress, wsName); err != nil {
 		return err
 	}
-	s.anchor(g.WindowAddress)
-	g.Anchored = true
-	g.HyprWorkspace = wsName
+	if s.cfg.Anchor && !g.Anchored {
+		s.anchor(g.WindowAddress)
+		g.Anchored = true
+	}
 	s.st.Put(g)
 	s.st.ActiveGUI = tabID
 	s.save()
 	return nil
+}
+
+// AnchorCurrent força a ancora da GUI da aba atual.
+func (s *Service) AnchorCurrent() error {
+	tabID, err := s.currentTabID()
+	if err != nil {
+		return err
+	}
+	g, ok := s.st.Get(tabID)
+	if !ok {
+		return fmt.Errorf("a aba atual nao e uma GUI")
+	}
+	g.Anchored = false
+	s.st.Put(g)
+	s.save()
+	return s.raise(tabID)
 }
 
 // terminalWorkspace devolve o workspace do terminal que roda o herdr.
@@ -281,6 +326,9 @@ func (s *Service) CloseCurrent() error {
 	if err := hypr.CloseWindow(g.WindowAddress); err != nil {
 		// A janela pode ja ter fechado; segue o baile.
 		_ = err
+	}
+	if g.XpraDisplay > 0 {
+		xpra.Stop(g.XpraDisplay)
 	}
 	s.st.Delete(tabID)
 	if s.st.ActiveGUI == tabID {
@@ -440,12 +488,31 @@ func (s *Service) Restore() error {
 				s.st.Delete(g.TabID)
 				continue
 			}
-			if err := hypr.Exec(strings.Join(app.Command, " ")); err != nil {
-				continue
-			}
-			if win, ok = hypr.WaitNewWindow(nil, 5*time.Second); !ok {
-				if win, ok = hypr.WaitClass(app.WindowClass, nil, 5*time.Second); !ok {
+			if app.Mode == "xpra" {
+				display := g.XpraDisplay
+				if display == 0 {
+					display = xpra.DisplayFor(g.TabID)
+				}
+				if err := xpra.Start(display, app.Command); err != nil {
 					continue
+				}
+				if err := xpra.Attach(display); err != nil {
+					xpra.Stop(display)
+					continue
+				}
+				g.XpraDisplay = display
+				win, ok = hypr.WaitNewWindow(nil, 10*time.Second)
+				if !ok {
+					continue
+				}
+			} else {
+				if err := hypr.Exec(strings.Join(app.Command, " ")); err != nil {
+					continue
+				}
+				if win, ok = hypr.WaitNewWindow(nil, 5*time.Second); !ok {
+					if win, ok = hypr.WaitClass(app.WindowClass, nil, 5*time.Second); !ok {
+						continue
+					}
 				}
 			}
 			g.WindowAddress = win.Address
