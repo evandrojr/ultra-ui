@@ -90,4 +90,24 @@ if [[ -f $FOOT_CONFIG ]]; then
   fi
 fi
 
+# 6. Hyprland: Super+setas alternam abas (substitui o foco de janela)
+HYPR_BINDINGS="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/bindings.lua"
+if [[ -f $HYPR_BINDINGS ]]; then
+  if grep -q 'UltraUI: aba anterior' "$HYPR_BINDINGS"; then
+    log "hypr: binds ja presentes"
+  else
+    backup "$HYPR_BINDINGS"
+    cat >> "$HYPR_BINDINGS" <<'EOF'
+
+-- ultra-ui: Super+setas alternam abas do herdr (substitui o foco de janela)
+hl.unbind("SUPER + LEFT")
+hl.unbind("SUPER + RIGHT")
+o.bind("SUPER + LEFT", "UltraUI: aba anterior", "ultra-ui tab prev")
+o.bind("SUPER + RIGHT", "UltraUI: aba proxima", "ultra-ui tab next")
+EOF
+    log "hypr: binds adicionados"
+  fi
+  command -v hyprctl >/dev/null 2>&1 && hyprctl reload >/dev/null 2>&1 || true
+fi
+
 log "pronto. rode 'ultra-ui doctor' para conferir."
