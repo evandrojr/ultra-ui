@@ -56,6 +56,8 @@ func Default() Config {
 	add("files", "Dolphin", "org.kde.dolphin", "dolphin")
 	add("files-thunar", "Arquivos (thunar)", "thunar", "thunar")
 	add("editor", "Zed", "dev.zed.Zed", "zed")
+	add("vscode", "VS Code", "com.microsoft.VSCode", "code")
+	add("omawrite", "Omawrite", "omawrite", "omawrite")
 	add("btop", "btop", "btop", "btop")
 	add("imv", "imv", "imv", "imv")
 	add("lazygit", "lazygit", "lazygit", "lazygit")
