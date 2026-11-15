@@ -4,6 +4,7 @@ package gui
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"os/signal"
 	"sort"
 	"strconv"
@@ -76,6 +77,12 @@ func (s *Service) OpenApp(appID, label, cwd string) error {
 	if !ok {
 		return fmt.Errorf("app desconhecido %q; disponiveis: %s", appID, strings.Join(appIDs(s.cfg), ", "))
 	}
+	if len(app.Command) == 0 {
+		return fmt.Errorf("app %q sem comando", appID)
+	}
+	if _, err := exec.LookPath(app.Command[0]); err != nil {
+		return fmt.Errorf("comando %q nao encontrado para o app %q", app.Command[0], app.Label)
+	}
 	if label == "" {
 		label = app.Label
 	}
@@ -102,12 +109,12 @@ func (s *Service) OpenApp(appID, label, cwd string) error {
 	}
 
 	var win hypr.Client
-	found := false
-	if app.WindowClass != "" {
-		win, found = hypr.WaitClass(app.WindowClass, 5*time.Second)
-	}
-	if !found {
-		win, found = hypr.WaitNewWindow(before, 5*time.Second)
+	found := bool(false)
+	// Primeiro procura uma janela genuinamente nova; so entao aceita a classe,
+	// para nao associar uma janela que ja estava aberta.
+	win, found = hypr.WaitNewWindow(before, 5*time.Second)
+	if !found && app.WindowClass != "" {
+		win, found = hypr.WaitClass(app.WindowClass, before, 3*time.Second)
 	}
 	if !found {
 		// Ultima tentativa: a janela ativa pode ser a recem-aberta.
@@ -345,7 +352,7 @@ func (s *Service) Restore() error {
 				continue
 			}
 			if win, ok = hypr.WaitNewWindow(nil, 5*time.Second); !ok {
-				if win, ok = hypr.WaitClass(app.WindowClass, 5*time.Second); !ok {
+				if win, ok = hypr.WaitClass(app.WindowClass, nil, 5*time.Second); !ok {
 					continue
 				}
 			}

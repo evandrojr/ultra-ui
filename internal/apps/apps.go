@@ -20,10 +20,16 @@ type Entry struct {
 	Class   string
 }
 
-// List devolve o catalogo ordenado por rotulo.
+// List devolve o catalogo ordenado por rotulo, sem apps indisponiveis.
 func List(cfg config.Config) []Entry {
 	entries := make([]Entry, 0, len(cfg.Apps))
 	for id, app := range cfg.Apps {
+		if len(app.Command) == 0 {
+			continue
+		}
+		if _, err := exec.LookPath(app.Command[0]); err != nil {
+			continue
+		}
 		entries = append(entries, Entry{
 			ID:      id,
 			Label:   app.Label,

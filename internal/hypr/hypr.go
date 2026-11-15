@@ -243,12 +243,19 @@ func WaitNewWindow(before map[string]bool, timeout time.Duration) (Client, bool)
 	return Client{}, false
 }
 
-// WaitClass aguarda uma janela da classe aparecer.
-func WaitClass(class string, timeout time.Duration) (Client, bool) {
+// WaitClass aguarda uma janela da classe aparecer, ignorando enderecos que ja
+// existiam antes.
+func WaitClass(class string, ignore map[string]bool, timeout time.Duration) (Client, bool) {
 	deadline := time.Now().Add(timeout)
 	for time.Now().Before(deadline) {
-		if c, ok := FindByClass(class); ok {
-			return c, true
+		clients, err := Clients()
+		if err == nil {
+			for i := len(clients) - 1; i >= 0; i-- {
+				c := clients[i]
+				if c.Mapped && !ignore[c.Address] && strings.EqualFold(c.Class, class) {
+					return c, true
+				}
+			}
 		}
 		time.Sleep(100 * time.Millisecond)
 	}

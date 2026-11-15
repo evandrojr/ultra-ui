@@ -4,6 +4,7 @@ package config
 import (
 	"encoding/json"
 	"os"
+	"os/exec"
 	"path/filepath"
 )
 
@@ -32,21 +33,31 @@ type Config struct {
 	Apps map[string]App `json:"apps"`
 }
 
-// Default retorna a configuracao padrao.
+// Default retorna a configuracao padrao, incluindo apenas apps instalados.
 func Default() Config {
-	return Config{
+	cfg := Config{
 		WorkspacePrefix: "ultra:",
 		Scratchpad:      "special:ultra-ui",
 		SidebarWidthPx:  240,
 		Anchor:          true,
-		Apps: map[string]App{
-			"browser":       {Label: "Chromium", Command: []string{"chromium"}, WindowClass: "chromium"},
-			"files":         {Label: "Arquivos (thunar)", Command: []string{"thunar"}, WindowClass: "thunar"},
-			"editor":        {Label: "Zed", Command: []string{"zed"}, WindowClass: "dev.zed.Zed"},
-			"files-dolphin": {Label: "Dolphin", Command: []string{"dolphin"}, WindowClass: "dolphin"},
-			"btop":          {Label: "btop", Command: []string{"btop"}, WindowClass: "btop"},
-		},
+		Apps:            map[string]App{},
 	}
+	add := func(id, label, class string, command ...string) {
+		if len(command) == 0 {
+			return
+		}
+		if _, err := exec.LookPath(command[0]); err == nil {
+			cfg.Apps[id] = App{Label: label, Command: command, WindowClass: class}
+		}
+	}
+	add("browser", "Chromium", "chromium", "chromium")
+	add("files", "Dolphin", "org.kde.dolphin", "dolphin")
+	add("files-thunar", "Arquivos (thunar)", "thunar", "thunar")
+	add("editor", "Zed", "dev.zed.Zed", "zed")
+	add("btop", "btop", "btop", "btop")
+	add("imv", "imv", "imv", "imv")
+	add("lazygit", "lazygit", "lazygit", "lazygit")
+	return cfg
 }
 
 // Dir resolve o diretorio de config: HERDR_PLUGIN_CONFIG_DIR ou

@@ -53,7 +53,7 @@ func TestFindByClass(t *testing.T) {
 
 func TestWaitClassTimeout(t *testing.T) {
 	newMock(t, `[]`)
-	if _, ok := WaitClass("chromium", 200*time.Millisecond); ok {
+	if _, ok := WaitClass("chromium", nil, 200*time.Millisecond); ok {
 		t.Fatal("nao deveria achar janela em estado vazio")
 	}
 }

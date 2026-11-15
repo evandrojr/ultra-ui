@@ -35,6 +35,8 @@ case "$key $sub" in
       case "$app" in
         chromium*) cls="chromium"; addr="0xCHROMIUM" ;;
         thunar*)   cls="thunar";   addr="0xTHUNAR" ;;
+        true*)     cls="teste-app"; addr="0xTESTE" ;;
+        btop*)     cls="btop";     addr="0xBTOP" ;;
         *)         cls="$app";      addr="0x${app^^}" ;;
       esac
       python3 - "$STATE/clients.json" "$cls" "$addr" <<'PY'
@@ -87,7 +89,7 @@ func setup(t *testing.T) (*Service, string) {
 	t.Setenv("ULTRA_UI_HYPRCTL", filepath.Join(dir, "hyprctl"))
 	t.Setenv("ULTRA_UI_HERDR", filepath.Join(dir, "herdr"))
 	t.Setenv("HERDR_PLUGIN_STATE_DIR", filepath.Join(dir, "state"))
-	t.Setenv("HERDR_PLUGIN_CONFIG_DIR", filepath.Join(dir, "config"))
+	t.Setenv("HERDR_PLUGIN_CONFIG_DIR", dir)
 	t.Setenv("HERDR_WORKSPACE_ID", "w19")
 	t.Setenv("HERDR_TAB_ID", "w19:t1")
 
@@ -95,6 +97,7 @@ func setup(t *testing.T) (*Service, string) {
 	writeMockHerdr(t, dir)
 
 	files := map[string]string{
+		"ultra-ui.json":        `{"apps":{"teste":{"label":"App de teste","command":["true"],"window_class":"teste-app"}}}`,
 		"clients.json":         mockClientsHead + "]",
 		"activeworkspace.json": `{"id":5,"name":"5"}`,
 		"activewindow.json":    `{"address":"0x1","class":"foot","title":"foot"}`,
@@ -127,28 +130,28 @@ func dispatchLog(t *testing.T, dir string) string {
 
 func TestOpenAppCriaTabEEstado(t *testing.T) {
 	svc, dir := setup(t)
-	if err := svc.OpenApp("browser", "", ""); err != nil {
+	if err := svc.OpenApp("teste", "", ""); err != nil {
 		t.Fatalf("OpenApp: %v", err)
 	}
 	g, ok := svc.st.Get("w19:t2")
 	if !ok {
 		t.Fatal("aba GUI nao registrada")
 	}
-	if g.WindowAddress != "0xCHROMIUM" || g.App != "browser" {
+	if g.WindowAddress != "0xTESTE" || g.App != "teste" {
 		t.Fatalf("mapeamento = %+v", g)
 	}
 	log := dispatchLog(t, dir)
-	if !strings.Contains(log, "exec chromium") {
+	if !strings.Contains(log, "exec true") {
 		t.Fatalf("exec nao disparado:\n%s", log)
 	}
-	if !strings.Contains(log, "focuswindow address:0xCHROMIUM") {
+	if !strings.Contains(log, "focuswindow address:0xTESTE") {
 		t.Fatalf("foco nao disparado:\n%s", log)
 	}
 }
 
 func TestFocusTabGUILevantaJanela(t *testing.T) {
 	svc, dir := setup(t)
-	if err := svc.OpenApp("browser", "", ""); err != nil {
+	if err := svc.OpenApp("teste", "", ""); err != nil {
 		t.Fatalf("OpenApp: %v", err)
 	}
 	os.Remove(filepath.Join(dir, "dispatch.log"))
@@ -156,14 +159,14 @@ func TestFocusTabGUILevantaJanela(t *testing.T) {
 		t.Fatalf("FocusTab: %v", err)
 	}
 	log := dispatchLog(t, dir)
-	if !strings.Contains(log, "focuswindow address:0xCHROMIUM") {
+	if !strings.Contains(log, "focuswindow address:0xTESTE") {
 		t.Fatalf("janela GUI nao focada:\n%s", log)
 	}
 }
 
 func TestFocusTabTerminalEscondeGUI(t *testing.T) {
 	svc, dir := setup(t)
-	if err := svc.OpenApp("browser", "", ""); err != nil {
+	if err := svc.OpenApp("teste", "", ""); err != nil {
 		t.Fatalf("OpenApp: %v", err)
 	}
 	os.Remove(filepath.Join(dir, "dispatch.log"))
@@ -171,7 +174,7 @@ func TestFocusTabTerminalEscondeGUI(t *testing.T) {
 		t.Fatalf("FocusTab: %v", err)
 	}
 	log := dispatchLog(t, dir)
-	if !strings.Contains(log, "movetoworkspacesilent special:ultra-ui,address:0xCHROMIUM") {
+	if !strings.Contains(log, "movetoworkspacesilent special:ultra-ui,address:0xTESTE") {
 		t.Fatalf("GUI nao enviada ao scratchpad:\n%s", log)
 	}
 	if svc.st.ActiveGUI != "" {
@@ -181,7 +184,7 @@ func TestFocusTabTerminalEscondeGUI(t *testing.T) {
 
 func TestCloseCurrentFechaJanelaELimpaEstado(t *testing.T) {
 	svc, dir := setup(t)
-	if err := svc.OpenApp("browser", "", ""); err != nil {
+	if err := svc.OpenApp("teste", "", ""); err != nil {
 		t.Fatalf("OpenApp: %v", err)
 	}
 	t.Setenv("HERDR_TAB_ID", "w19:t2")
@@ -193,7 +196,7 @@ func TestCloseCurrentFechaJanelaELimpaEstado(t *testing.T) {
 		t.Fatal("estado da GUI nao removido")
 	}
 	log := dispatchLog(t, dir)
-	if !strings.Contains(log, "closewindow address:0xCHROMIUM") {
+	if !strings.Contains(log, "closewindow address:0xTESTE") {
 		t.Fatalf("janela nao fechada:\n%s", log)
 	}
 }
@@ -201,7 +204,7 @@ func TestCloseCurrentFechaJanelaELimpaEstado(t *testing.T) {
 func TestOpenAppSemSessaoGraficaFalha(t *testing.T) {
 	svc, _ := setup(t)
 	t.Setenv("ULTRA_UI_HYPRCTL", filepath.Join(t.TempDir(), "nao-existe"))
-	err := svc.OpenApp("browser", "", "")
+	err := svc.OpenApp("teste", "", "")
 	if err == nil || !strings.Contains(err.Error(), "Hyprland") {
 		t.Fatalf("erro inesperado: %v", err)
 	}
@@ -209,7 +212,7 @@ func TestOpenAppSemSessaoGraficaFalha(t *testing.T) {
 
 func TestRestoreRecriaAbaQuandoJanenaSobrevive(t *testing.T) {
 	svc, _ := setup(t)
-	if err := svc.OpenApp("browser", "", ""); err != nil {
+	if err := svc.OpenApp("teste", "", ""); err != nil {
 		t.Fatalf("OpenApp: %v", err)
 	}
 	// Restaura com a janela ainda presente.
