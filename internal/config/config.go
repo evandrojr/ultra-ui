@@ -60,7 +60,7 @@ func Default() Config {
 	add("editor", "Zed", "dev.zed.Zed", "zed")
 	add("vscode", "VS Code", "com.microsoft.VSCode", "code")
 	add("omawrite", "Omawrite", "omawrite", "omawrite")
-	add("btop", "btop", "btop", "btop")
+	add("btop", "btop", "foot", "foot", "-e", "btop")
 	add("imv", "imv", "imv", "imv")
 	add("lazygit", "lazygit", "lazygit", "lazygit")
 	if _, err := exec.LookPath("xterm"); err == nil {

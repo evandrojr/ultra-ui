@@ -128,9 +128,9 @@ func (s *Service) OpenApp(appID, label, cwd string) error {
 
 	var win hypr.Client
 	found := bool(false)
-	wait := 5 * time.Second
+	wait := 12 * time.Second
 	if xpraDisplay > 0 {
-		wait = 10 * time.Second
+		wait = 12 * time.Second
 	}
 	// Primeiro procura uma janela genuinamente nova; so entao aceita a classe,
 	// para nao associar uma janela que ja estava aberta.
@@ -176,7 +176,11 @@ func (s *Service) OpenApp(appID, label, cwd string) error {
 	s.save()
 
 	if paneID != "" {
-		_ = herdr.PaneRun(paneID, "ultra-ui", "gui", "sentinel", tabID, win.Address)
+		exe, err := os.Executable()
+		if err != nil {
+			exe = "ultra-ui"
+		}
+		_ = herdr.PaneRun(paneID, exe, "gui", "sentinel", tabID, win.Address)
 	}
 	if err := s.raise(tabID); err != nil {
 		fmt.Fprintf(os.Stderr, "ultra-ui: foco da janela: %v\n", err)
@@ -552,6 +556,17 @@ func Sentinel(tabID, address string) {
 		for {
 			time.Sleep(500 * time.Millisecond)
 			if _, ok := hypr.Find(address); !ok {
+				// A janela foi fechada: limpa o estado e fecha a aba.
+				if st, err := state.Load(); err == nil {
+					if _, ok := st.Get(tabID); ok {
+						st.Delete(tabID)
+						if st.ActiveGUI == tabID {
+							st.ActiveGUI = ""
+						}
+						_ = st.Save()
+					}
+				}
+				_ = herdr.TabClose(tabID)
 				return
 			}
 		}

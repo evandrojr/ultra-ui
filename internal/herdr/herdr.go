@@ -166,6 +166,9 @@ func TabCreate(workspaceID, label, cwd string, focus bool) (tabID, paneID string
 			Tab struct {
 				TabID string `json:"tab_id"`
 			} `json:"tab"`
+			RootPane struct {
+				PaneID string `json:"pane_id"`
+			} `json:"root_pane"`
 			Pane struct {
 				PaneID string `json:"pane_id"`
 			} `json:"pane"`
@@ -174,7 +177,11 @@ func TabCreate(workspaceID, label, cwd string, focus bool) (tabID, paneID string
 	if err := json.Unmarshal([]byte(out), &r); err != nil {
 		return "", "", fmt.Errorf("herdr tab create: %w", err)
 	}
-	return r.Result.Tab.TabID, r.Result.Pane.PaneID, nil
+	paneID = r.Result.RootPane.PaneID
+	if paneID == "" {
+		paneID = r.Result.Pane.PaneID
+	}
+	return r.Result.Tab.TabID, paneID, nil
 }
 
 // TabFocus foca uma aba.
