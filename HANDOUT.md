@@ -106,6 +106,24 @@ O compositor engole a tecla, então a janela gráfica focada não interpreta o
 atalho. Isso substitui os bindings de foco de janela do Omarchy
 (`hl.unbind("SUPER + ...")`).
 
+## Modo Xpra (apps X11)
+
+Apps com `"mode": "xpra"` rodam sob um servidor Xpra e são anexados numa
+janela do compositor, ancorada como aba GUI. Requer `xpra` e as fontes X
+(`xorg-fonts-75dpi xorg-fonts-alias-75dpi`). O Xpra **não** desenha dentro da
+aba (é janela separada, como o modo nativo); o ganho é rodar apps X11 no
+Wayland com a mesma âncora e alternância.
+
+```json
+"apps": { "xterm": { "label": "XTerm", "command": ["xterm"], "window_class": "XTerm", "mode": "xpra" } }
+```
+
+## Âncora
+
+A âncora é aplicada uma vez por janela. Se você mover/redimensionar, a
+geometria é preservada ao sair e voltar. Para forçar a âncora padrão:
+`ultra-ui gui anchor`.
+
 ## Próximos passos
 
 1. Camada de compatibilidade do dispatch (acima).
