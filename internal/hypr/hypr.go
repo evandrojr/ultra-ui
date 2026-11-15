@@ -8,9 +8,48 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
+	"sort"
+	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
+
+var (
+	luaOnce sync.Once
+	luaMode bool
+)
+
+// LuaMode indica se o Hyprland avalia `hyprctl dispatch` como Lua (0.56 com
+// config Lua). Nesse modo a forma legada `dispatch exec <cmd>` nao funciona.
+func LuaMode() bool {
+	luaOnce.Do(func() {
+		out, err := run("dispatch", `hl.dsp.no_op()`)
+		luaMode = err == nil && strings.Contains(strings.ToLower(out), "ok")
+	})
+	return luaMode
+}
+
+func luaString(s string) string {
+	s = strings.ReplaceAll(s, `\`, `\\`)
+	s = strings.ReplaceAll(s, `"`, `\"`)
+	return `"` + s + `"`
+}
+
+func luaDispatch(expr string) error {
+	_, err := run("dispatch", expr)
+	return err
+}
+
+// Exec roda um comando no Hyprland.
+func Exec(cmd string) error {
+	if LuaMode() {
+		return luaDispatch("hl.dsp.exec_cmd(" + luaString(cmd) + ")")
+	}
+	_, err := run("dispatch", "exec", cmd)
+	return err
+}
 
 // Bin resolve o binario: ULTRA_UI_HYPRCTL (teste) ou hyprctl.
 func Bin() string {
@@ -67,6 +106,7 @@ type ActiveWindowInfo struct {
 
 func run(args ...string) (string, error) {
 	cmd := exec.Command(Bin(), args...)
+	cmd.Env = hyprEnv()
 	var out, errBuf bytes.Buffer
 	cmd.Stdout = &out
 	cmd.Stderr = &errBuf
@@ -80,6 +120,33 @@ func run(args ...string) (string, error) {
 	return out.String(), nil
 }
 
+// hyprEnv devolve o ambiente para o hyprctl. O server do herdr roda sem
+// HYPRLAND_INSTANCE_SIGNATURE; quando ela falta, descobre a instancia ativa
+// em $XDG_RUNTIME_DIR/hypr e a injeta no subprocess.
+func hyprEnv() []string {
+	env := os.Environ()
+	if os.Getenv("HYPRLAND_INSTANCE_SIGNATURE") != "" {
+		return env
+	}
+	runtime := os.Getenv("XDG_RUNTIME_DIR")
+	if runtime == "" {
+		runtime = "/run/user/" + strconv.Itoa(os.Getuid())
+	}
+	matches, err := filepath.Glob(filepath.Join(runtime, "hypr", "*"))
+	if err != nil || len(matches) == 0 {
+		return env
+	}
+	sort.Slice(matches, func(i, j int) bool {
+		fi, errI := os.Stat(matches[i])
+		fj, errJ := os.Stat(matches[j])
+		if errI != nil || errJ != nil {
+			return matches[i] > matches[j]
+		}
+		return fi.ModTime().After(fj.ModTime())
+	})
+	return append(env, "HYPRLAND_INSTANCE_SIGNATURE="+filepath.Base(matches[0]))
+}
+
 // Dispatch executa um dispatch do Hyprland.
 func Dispatch(args ...string) error {
 	_, err := run(append([]string{"dispatch"}, args...)...)
@@ -89,7 +156,28 @@ func Dispatch(args ...string) error {
 // DispatchSilent executa um dispatch sem falhar quando a janela/workspace
 // nao existe mais.
 func DispatchSilent(args ...string) {
-	_, _ = run(append([]string{"dispatch"}, args...)...)
+	out, err := run(append([]string{"dispatch"}, args...)...)
+	if err != nil {
+		debugf("dispatch %v: %v (out=%q)", args, err, out)
+	}
+}
+
+// debugf registra diagnostico quando o arquivo de debug existe no state dir.
+func debugf(format string, a ...any) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return
+	}
+	dir := filepath.Join(home, ".local", "state", "ultra-ui")
+	if _, err := os.Stat(filepath.Join(dir, "debug")); err != nil {
+		return
+	}
+	f, err := os.OpenFile(filepath.Join(dir, "hypr-debug.log"), os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o644)
+	if err != nil {
+		return
+	}
+	defer f.Close()
+	fmt.Fprintf(f, format+"\n", a...)
 }
 
 // Clients lista as janelas.
@@ -204,6 +292,14 @@ func FindByClass(class string) (Client, bool) {
 
 // FocusWindow traz uma janela para o workspace e a foca.
 func FocusWindow(address, workspace string) error {
+	sel := "address:" + address
+	if LuaMode() {
+		if workspace != "" {
+			DispatchSilent("hl.dsp.window.move({ workspace = " + luaString(workspace) +
+				", window = " + luaString(sel) + ", follow = false })")
+		}
+		return luaDispatch("hl.dsp.focus({ window = " + luaString(sel) + " })")
+	}
 	if workspace != "" {
 		DispatchSilent("movetoworkspace", workspace+",address:"+address)
 	}
@@ -218,12 +314,52 @@ func HideWindow(address, scratchpad string) {
 	if scratchpad == "" {
 		scratchpad = "special:ultra-ui"
 	}
+	sel := "address:" + address
+	if LuaMode() {
+		DispatchSilent("hl.dsp.window.move({ workspace = " + luaString(scratchpad) +
+			", window = " + luaString(sel) + ", follow = false })")
+		return
+	}
 	DispatchSilent("movetoworkspacesilent", scratchpad+",address:"+address)
 }
 
 // CloseWindow fecha a janela.
 func CloseWindow(address string) error {
+	sel := "address:" + address
+	if LuaMode() {
+		return luaDispatch("hl.dsp.window.close({ window = " + luaString(sel) + " })")
+	}
 	return Dispatch("closewindow", "address:"+address)
+}
+
+// Float alterna o estado flutuante de uma janela.
+func Float(address string) {
+	if LuaMode() {
+		DispatchSilent("hl.dsp.window.float({ action = \"toggle\", window = " +
+			luaString("address:"+address) + " })")
+		return
+	}
+	DispatchSilent("togglefloating", "address:"+address)
+}
+
+// MoveExact posiciona uma janela em coordenadas absolutas.
+func MoveExact(address string, x, y int) {
+	if LuaMode() {
+		DispatchSilent("hl.dsp.window.move({ window = " + luaString("address:"+address) +
+			fmt.Sprintf(", x = %d, y = %d })", x, y))
+		return
+	}
+	DispatchSilent("movewindow", "exact", fmt.Sprintf("%d %d", x, y)+",address:"+address)
+}
+
+// ResizeExact redimensiona uma janela.
+func ResizeExact(address string, w, h int) {
+	if LuaMode() {
+		DispatchSilent("hl.dsp.window.resize({ window = " + luaString("address:"+address) +
+			fmt.Sprintf(", x = %d, y = %d })", w, h))
+		return
+	}
+	DispatchSilent("resizewindow", "exact", fmt.Sprintf("%d %d", w, h)+",address:"+address)
 }
 
 // WaitNewWindow aguarda uma janela nova aparecer e a devolve.

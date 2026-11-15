@@ -8,7 +8,7 @@ import (
 
 func TestSaveLoadRoundTrip(t *testing.T) {
 	dir := t.TempDir()
-	t.Setenv("HERDR_PLUGIN_STATE_DIR", dir)
+	t.Setenv("ULTRA_UI_STATE_DIR", dir)
 
 	s, err := Load()
 	if err != nil {
@@ -63,7 +63,7 @@ func TestPruneRemoveWorkspacesFechados(t *testing.T) {
 
 func TestSaveCreatesDir(t *testing.T) {
 	base := filepath.Join(t.TempDir(), "nested", "state")
-	t.Setenv("HERDR_PLUGIN_STATE_DIR", base)
+	t.Setenv("ULTRA_UI_STATE_DIR", base)
 	s := &State{Version: 1, GUITabs: map[string]GUITab{}}
 	if err := s.Save(); err != nil {
 		t.Fatalf("Save: %v", err)

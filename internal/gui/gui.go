@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
+	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
@@ -103,7 +104,7 @@ func (s *Service) OpenApp(appID, label, cwd string) error {
 		return fmt.Errorf("criar aba: %w", err)
 	}
 
-	if err := hypr.Dispatch("exec", strings.Join(app.Command, " ")); err != nil {
+	if err := hypr.Exec(strings.Join(app.Command, " ")); err != nil {
 		_ = herdr.TabClose(tabID)
 		return fmt.Errorf("executar %q: %w", app.Command[0], err)
 	}
@@ -196,9 +197,9 @@ func (s *Service) anchor(address string) {
 	if w <= 0 || h <= 0 {
 		return
 	}
-	hypr.DispatchSilent("togglefloating", "address:"+address)
-	hypr.DispatchSilent("movewindow", "exact", fmt.Sprintf("%d %d", x, y)+",address:"+address)
-	hypr.DispatchSilent("resizewindow", "exact", fmt.Sprintf("%d %d", w, h)+",address:"+address)
+	hypr.Float(address)
+	hypr.MoveExact(address, x, y)
+	hypr.ResizeExact(address, w, h)
 }
 
 // FocusTab trata o evento tab.focused.
@@ -216,14 +217,27 @@ func (s *Service) FocusTab(tabID string) error {
 		}
 		return nil
 	}
-	// Aba de terminal: esconde a GUI ativa.
-	if s.st.ActiveGUI != "" {
-		if g, ok := s.st.Get(s.st.ActiveGUI); ok {
-			hypr.HideWindow(g.WindowAddress, s.cfg.Scratchpad)
+	// Aba de terminal: esconde as GUIs visiveis do workspace, independente do
+	// ActiveGUI (que pode ter sido limpo por um evento anterior).
+	wsID := herdr.EnvWorkspaceID()
+	if wsID == "" {
+		var err error
+		wsID, err = s.currentWorkspaceID()
+		if err != nil {
+			return err
 		}
-		s.st.ActiveGUI = ""
-		s.save()
 	}
+	for _, g := range s.st.GUITabs {
+		if g.WorkspaceID != wsID {
+			continue
+		}
+		if c, ok := hypr.Find(g.WindowAddress); ok && c.Workspace.Name == s.cfg.Scratchpad {
+			continue
+		}
+		hypr.HideWindow(g.WindowAddress, s.cfg.Scratchpad)
+	}
+	s.st.ActiveGUI = ""
+	s.save()
 	return nil
 }
 
@@ -291,6 +305,20 @@ func (s *Service) DetachCurrent() error {
 
 // HandleEvent processa os hooks do herdr.
 func (s *Service) HandleEvent(event string) error {
+	debug := os.Getenv("ULTRA_UI_DEBUG") != ""
+	if !debug {
+		if _, err := os.Stat(filepath.Join(state.Dir(), "debug")); err == nil {
+			debug = true
+		}
+	}
+	if debug {
+		if f, err := os.OpenFile(filepath.Join(state.Dir(), "debug.log"), os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o644); err == nil {
+			fmt.Fprintf(f, "event=%s tab=%q ws=%q ctx=%s\n",
+				event, os.Getenv("HERDR_TAB_ID"), os.Getenv("HERDR_WORKSPACE_ID"),
+				os.Getenv("HERDR_PLUGIN_CONTEXT_JSON"))
+			f.Close()
+		}
+	}
 	tabID := herdr.EnvTabID()
 	workspaceID := herdr.EnvWorkspaceID()
 	switch event {
@@ -348,7 +376,7 @@ func (s *Service) Restore() error {
 				s.st.Delete(g.TabID)
 				continue
 			}
-			if err := hypr.Dispatch("exec", strings.Join(app.Command, " ")); err != nil {
+			if err := hypr.Exec(strings.Join(app.Command, " ")); err != nil {
 				continue
 			}
 			if win, ok = hypr.WaitNewWindow(nil, 5*time.Second); !ok {
@@ -411,32 +439,73 @@ func appIDs(cfg config.Config) []string {
 	return ids
 }
 
-// findTerminalWindow sobe a arvore de processos ate achar quem tem uma janela
-// no Hyprland (o terminal que roda o herdr).
+// findTerminalWindow descobre o terminal que roda o herdr: sobe a arvore de
+// cada processo "herdr" (clientes) ate achar um PID que tenha janela no
+// Hyprland. Funciona tanto no hook (server) quanto na CLI manual via SSH.
 func findTerminalWindow() (hypr.Client, bool) {
-	pid := os.Getpid()
-	for i := 0; i < 6 && pid > 1; i++ {
-		clients, err := hypr.Clients()
-		if err == nil {
-			for _, c := range clients {
-				if c.Pid == pid {
-					return c, true
-				}
+	clients, err := hypr.Clients()
+	if err != nil {
+		return hypr.Client{}, false
+	}
+	byPid := map[int]hypr.Client{}
+	for _, c := range clients {
+		byPid[c.Pid] = c
+	}
+	for _, pid := range herdrProcesses() {
+		for p := pid; p > 1; {
+			if c, ok := byPid[p]; ok {
+				return c, true
 			}
+			next, ok := parentPid(p)
+			if !ok || next == p {
+				break
+			}
+			p = next
 		}
-		data, err := os.ReadFile("/proc/" + strconv.Itoa(pid) + "/stat")
-		if err != nil {
-			break
-		}
-		fields := strings.Fields(string(data))
-		if len(fields) < 4 {
-			break
-		}
-		next, err := strconv.Atoi(fields[3])
-		if err != nil || next == pid {
-			break
-		}
-		pid = next
 	}
 	return hypr.Client{}, false
+}
+
+func herdrProcesses() []int {
+	entries, err := os.ReadDir("/proc")
+	if err != nil {
+		return nil
+	}
+	var pids []int
+	for _, e := range entries {
+		pid, err := strconv.Atoi(e.Name())
+		if err != nil {
+			continue
+		}
+		data, err := os.ReadFile("/proc/" + e.Name() + "/stat")
+		if err != nil {
+			continue
+		}
+		comm := string(data)
+		if i := strings.IndexByte(comm, '('); i >= 0 {
+			if j := strings.IndexByte(comm[i:], ')'); j >= 0 {
+				comm = comm[i+1 : i+j]
+			}
+		}
+		if comm == "herdr" {
+			pids = append(pids, pid)
+		}
+	}
+	return pids
+}
+
+func parentPid(pid int) (int, bool) {
+	data, err := os.ReadFile("/proc/" + strconv.Itoa(pid) + "/stat")
+	if err != nil {
+		return 0, false
+	}
+	fields := strings.Fields(string(data))
+	if len(fields) < 4 {
+		return 0, false
+	}
+	next, err := strconv.Atoi(fields[3])
+	if err != nil {
+		return 0, false
+	}
+	return next, true
 }

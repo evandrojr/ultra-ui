@@ -69,28 +69,27 @@ Seed Omarchy (inalterado) +:
 - Acesso ao Hyprland via SSH funciona com
   `HYPRLAND_INSTANCE_SIGNATURE=$(basename "$(ls -d /run/user/1000/hypr/*/ | head -1)")`.
 
-## PENDÊNCIA CRÍTICA — Hyprland 0.56.2 (config Lua)
+## Status do teste ao vivo (Hyprland 0.56.2)
 
-O Hyprland 0.56.2 com config Lua mudou o `hyprctl dispatch`: a forma antiga
-(`dispatch exec <cmd>`, `dispatch focuswindow address:...`) **falha**. O plugin
-ainda emite a forma legada, portanto abrir/focar/fechar GUI **não funciona**
-nessa sessão até a correção.
+Verificado de verdade, via SSH com o Hyprland rodando:
 
-Forma nova (validada, `exec_cmd` abriu o Dolphin):
+- `hl.dsp.exec_cmd` abriu o Dolphin; a aba GUI foi criada no herdr e o estado
+  persistiu.
+- Focar a aba de terminal manda a GUI para `special:ultra-ui`; focar a aba GUI
+  a traz de volta e a foca.
+- `gui close` fecha a janela e limpa o estado.
 
-```
-hyprctl dispatch 'hl.dsp.exec_cmd("<cmd>")'
-hyprctl dispatch 'hl.dsp.focus({ window = "address:0x..." })'
-hyprctl dispatch 'hl.dsp.window.move({ workspace = "WS", window = "address:0x...", follow = false })'
-hyprctl dispatch 'hl.dsp.window.close({ window = "address:0x..." })'
-hyprctl dispatch 'hl.dsp.window.float({ action = "toggle", window = "address:0x..." })'
-hyprctl dispatch 'hl.dsp.window.move({ window = "address:0x...", x = X, y = Y })'
-hyprctl dispatch 'hl.dsp.window.resize({ window = "address:0x...", x = W, y = H })'
-```
+Limitação conhecida: a âncora automática (sidebar visível) é aproximada — o
+Dolphin ignora em parte `window.move/resize`. Ajuste `sidebar_width_px` se
+precisar; a alternância não depende disso.
 
-Correção prevista: em `internal/hypr`, detectar o modo (probe
-`hl.dsp.exec_cmd("true")` → `ok`) e traduzir cada dispatch para a forma Lua;
-manter a forma legada como fallback. Testar âncora e alternância ao vivo.
+## PENDÊNCIA CRÍTICA — Hyprland 0.56.2 (config Lua) — RESOLVIDA
+
+O plugin detecta o modo via `hyprctl dispatch 'hl.dsp.no_op()'` e usa a forma
+Lua (`hl.dsp.exec_cmd`, `hl.dsp.focus`, `hl.dsp.window.*`) quando disponível,
+com fallback para a forma legada. O server do herdr não tem
+`HYPRLAND_INSTANCE_SIGNATURE`; o plugin descobre a instância em
+`$XDG_RUNTIME_DIR/hypr` e injeta no subprocess.
 
 ## Próximos passos
 

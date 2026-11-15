@@ -28,10 +28,10 @@ type State struct {
 	ActiveGUI string            `json:"active_gui,omitempty"`
 }
 
-// Dir resolve o diretorio de estado: HERDR_PLUGIN_STATE_DIR ou
-// ~/.local/state/ultra-ui.
+// Dir resolve o diretorio de estado. Usa sempre o dir fixo do usuario para
+// que a CLI manual e os hooks do plugin compartilhem o mesmo state.json.
 func Dir() string {
-	if dir := os.Getenv("HERDR_PLUGIN_STATE_DIR"); dir != "" {
+	if dir := os.Getenv("ULTRA_UI_STATE_DIR"); dir != "" {
 		return dir
 	}
 	home, err := os.UserHomeDir()

@@ -20,8 +20,16 @@ case "$key $sub" in
   "dispatch "*)
     echo "$*" >> "$STATE/dispatch.log"
     args="$*"
+    if [[ $args == *'no_op'* ]]; then
+      echo "ok"
+      exit 0
+    fi
     if [[ $args == *"exec"* ]]; then
-      app="${args##*exec }"
+      if [[ $args == *'exec_cmd('* ]]; then
+        app=$(printf '%s' "$args" | sed -n 's/.*exec_cmd("\([^"]*\)").*/\1/p')
+      else
+        app="${args##*exec }"
+      fi
       case "$app" in
         chromium*) cls="chromium"; addr="0xCHROMIUM" ;;
         thunar*)   cls="thunar";   addr="0xTHUNAR" ;;

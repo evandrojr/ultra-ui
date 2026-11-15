@@ -60,10 +60,10 @@ func Default() Config {
 	return cfg
 }
 
-// Dir resolve o diretorio de config: HERDR_PLUGIN_CONFIG_DIR ou
-// ~/.config/ultra-ui.
+// Dir resolve o diretorio de config. Usa sempre o dir fixo do usuario para
+// que a CLI manual e os hooks do plugin compartilhem a mesma configuracao.
 func Dir() string {
-	if dir := os.Getenv("HERDR_PLUGIN_CONFIG_DIR"); dir != "" {
+	if dir := os.Getenv("ULTRA_UI_CONFIG_DIR"); dir != "" {
 		return dir
 	}
 	home, err := os.UserHomeDir()

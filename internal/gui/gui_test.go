@@ -30,8 +30,16 @@ case "$key $sub" in
   "dispatch "*)
     echo "$*" >> "$STATE/dispatch.log"
     args="$*"
+    if [[ $args == *'no_op'* ]]; then
+      echo "ok"
+      exit 0
+    fi
     if [[ $args == *"exec"* ]]; then
-      app="${args##*exec }"
+      if [[ $args == *'exec_cmd('* ]]; then
+        app=$(printf '%s' "$args" | sed -n 's/.*exec_cmd("\([^"]*\)").*/\1/p')
+      else
+        app="${args##*exec }"
+      fi
       case "$app" in
         chromium*) cls="chromium"; addr="0xCHROMIUM" ;;
         thunar*)   cls="thunar";   addr="0xTHUNAR" ;;
@@ -88,8 +96,8 @@ func setup(t *testing.T) (*Service, string) {
 	dir := t.TempDir()
 	t.Setenv("ULTRA_UI_HYPRCTL", filepath.Join(dir, "hyprctl"))
 	t.Setenv("ULTRA_UI_HERDR", filepath.Join(dir, "herdr"))
-	t.Setenv("HERDR_PLUGIN_STATE_DIR", filepath.Join(dir, "state"))
-	t.Setenv("HERDR_PLUGIN_CONFIG_DIR", dir)
+	t.Setenv("ULTRA_UI_STATE_DIR", filepath.Join(dir, "state"))
+	t.Setenv("ULTRA_UI_CONFIG_DIR", dir)
 	t.Setenv("HERDR_WORKSPACE_ID", "w19")
 	t.Setenv("HERDR_TAB_ID", "w19:t1")
 
@@ -141,10 +149,10 @@ func TestOpenAppCriaTabEEstado(t *testing.T) {
 		t.Fatalf("mapeamento = %+v", g)
 	}
 	log := dispatchLog(t, dir)
-	if !strings.Contains(log, "exec true") {
+	if !strings.Contains(log, "true") {
 		t.Fatalf("exec nao disparado:\n%s", log)
 	}
-	if !strings.Contains(log, "focuswindow address:0xTESTE") {
+	if !strings.Contains(log, "focus({ window = \"address:0xTESTE\" })") {
 		t.Fatalf("foco nao disparado:\n%s", log)
 	}
 }
@@ -159,7 +167,7 @@ func TestFocusTabGUILevantaJanela(t *testing.T) {
 		t.Fatalf("FocusTab: %v", err)
 	}
 	log := dispatchLog(t, dir)
-	if !strings.Contains(log, "focuswindow address:0xTESTE") {
+	if !strings.Contains(log, "focus({ window = \"address:0xTESTE\" })") {
 		t.Fatalf("janela GUI nao focada:\n%s", log)
 	}
 }
@@ -174,7 +182,7 @@ func TestFocusTabTerminalEscondeGUI(t *testing.T) {
 		t.Fatalf("FocusTab: %v", err)
 	}
 	log := dispatchLog(t, dir)
-	if !strings.Contains(log, "movetoworkspacesilent special:ultra-ui,address:0xTESTE") {
+	if !strings.Contains(log, "window.move({ workspace = \"special:ultra-ui\", window = \"address:0xTESTE\"") {
 		t.Fatalf("GUI nao enviada ao scratchpad:\n%s", log)
 	}
 	if svc.st.ActiveGUI != "" {
@@ -196,7 +204,7 @@ func TestCloseCurrentFechaJanelaELimpaEstado(t *testing.T) {
 		t.Fatal("estado da GUI nao removido")
 	}
 	log := dispatchLog(t, dir)
-	if !strings.Contains(log, "closewindow address:0xTESTE") {
+	if !strings.Contains(log, "window.close({ window = \"address:0xTESTE\" })") {
 		t.Fatalf("janela nao fechada:\n%s", log)
 	}
 }
