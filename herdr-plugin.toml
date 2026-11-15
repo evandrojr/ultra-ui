@@ -1,0 +1,43 @@
+id = "local-ultra-ui"
+name = "ultra-ui"
+version = "0.1.0"
+min_herdr_version = "0.9.5"
+description = "Abas GUI do Hyprland dentro do herdr, com workspaces, sidebar e restore preservados"
+platforms = ["linux"]
+
+# Restaura o mapeamento aba -> janela depois que o herdr recupera a sessao
+# (workspaces, abas, paines e sessoes de IA).
+[[startup]]
+command = ["ultra-ui", "startup"]
+
+[[actions]]
+id = "gui-open"
+title = "Abrir app grafico na aba atual"
+description = "Escolhe um app e cria uma aba GUI no workspace atual"
+contexts = ["global", "workspace", "tab"]
+command = ["ultra-ui", "gui", "pick"]
+
+[[actions]]
+id = "gui-close"
+title = "Fechar GUI da aba atual"
+description = "Fecha a janela grafica associada a esta aba"
+contexts = ["tab"]
+command = ["ultra-ui", "gui", "close"]
+
+# Foco de aba: sobe a janela GUI ou manda para o scratchpad quando a aba e terminal.
+[[events]]
+on = "tab.focused"
+command = ["ultra-ui", "event", "tab.focused"]
+
+[[events]]
+on = "tab.closed"
+command = ["ultra-ui", "event", "tab.closed"]
+
+[[events]]
+on = "workspace.focused"
+command = ["ultra-ui", "event", "workspace.focused"]
+
+# O sentinela morrendo nao deve derrubar a janela grafica.
+[[events]]
+on = "pane.exited"
+command = ["ultra-ui", "event", "pane.exited"]

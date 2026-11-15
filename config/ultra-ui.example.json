@@ -1,0 +1,13 @@
+{
+  "workspace_prefix": "ultra:",
+  "scratchpad": "special:ultra-ui",
+  "sidebar_width_px": 240,
+  "anchor": true,
+  "apps": {
+    "browser": { "label": "Chromium", "command": ["chromium"], "window_class": "chromium" },
+    "files": { "label": "Arquivos (thunar)", "command": ["thunar"], "window_class": "thunar" },
+    "dolphin": { "label": "Dolphin", "command": ["dolphin"], "window_class": "dolphin" },
+    "editor": { "label": "Zed", "command": ["zed"], "window_class": "dev.zed.Zed" },
+    "btop": { "label": "btop", "command": ["btop"], "window_class": "btop" }
+  }
+}
