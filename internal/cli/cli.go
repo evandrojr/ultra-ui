@@ -76,6 +76,8 @@ func Run(args []string) int {
 		default:
 			return fail("workspace: prev|next")
 		}
+	case "install-keys":
+		return runInstallKeys()
 	case "status":
 		return runStatus()
 	case "doctor":
@@ -169,6 +171,27 @@ func runList() int {
 			active = " *"
 		}
 		fmt.Printf("%-14s %-24s %s -> %s (%s)%s\n", g.TabID, g.Label, g.WorkspaceID, g.WindowAddress, g.App, active)
+	}
+	return 0
+}
+
+func runInstallKeys() int {
+	cfg, err := config.Load(config.Dir())
+	if err != nil {
+		return fail("install-keys: %v", err)
+	}
+	keys := make([]string, 0, len(cfg.Apps))
+	byKey := map[string]string{}
+	for id, app := range cfg.Apps {
+		if app.Key == "" {
+			continue
+		}
+		keys = append(keys, app.Key)
+		byKey[app.Key] = id
+	}
+	sort.Strings(keys)
+	for _, k := range keys {
+		fmt.Printf("[[keys.command]]\nkey = \"prefix+shift+%s\"\ntype = \"shell\"\ncommand = \"ultra-ui gui open --app %s\"\n\n", k, byKey[k])
 	}
 	return 0
 }

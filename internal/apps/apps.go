@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 
 	"ultra-ui/internal/config"
@@ -43,6 +45,26 @@ func List(cfg config.Config) []Entry {
 	return entries
 }
 
+// env devolve o ambiente para o seletor grafico. O server do herdr nao tem
+// WAYLAND_DISPLAY; descobrimos o socket do compositor.
+func env() []string {
+	env := os.Environ()
+	if os.Getenv("WAYLAND_DISPLAY") == "" {
+		runtime := os.Getenv("XDG_RUNTIME_DIR")
+		if runtime == "" {
+			runtime = "/run/user/" + strconv.Itoa(os.Getuid())
+		}
+		matches, _ := filepath.Glob(filepath.Join(runtime, "wayland-*"))
+		if len(matches) > 0 {
+			env = append(env, "WAYLAND_DISPLAY="+filepath.Base(matches[0]))
+		}
+	}
+	if os.Getenv("OMARCHY_PATH") == "" {
+		env = append(env, "OMARCHY_PATH=/usr/share/omarchy")
+	}
+	return env
+}
+
 // Pick abre um seletor interativo e devolve o ID escolhido.
 func Pick(cfg config.Config) (string, error) {
 	entries := List(cfg)
@@ -55,6 +77,7 @@ func Pick(cfg config.Config) (string, error) {
 			args = append(args, e.Label)
 		}
 		cmd := exec.Command(path, args...)
+		cmd.Env = env()
 		cmd.Stdin = os.Stdin
 		cmd.Stderr = os.Stderr
 		out, err := cmd.Output()
@@ -73,6 +96,7 @@ func Pick(cfg config.Config) (string, error) {
 			}
 			return "", fmt.Errorf("selecao invalida: %q", chosen)
 		}
+		return "", fmt.Errorf("menu indisponivel (%v); use --app", err)
 	}
 	return pickTerminal(entries)
 }

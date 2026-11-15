@@ -76,7 +76,24 @@ EOF
   herdr server reload-config >/dev/null 2>&1 || true
 fi
 
-# 5. foot: Super+C / Super+V (adiciona as teclas nas linhas existentes)
+# 5. Atalhos por app (prefix+shift+<tecla>)
+if [[ -f $HERDR_CONFIG ]]; then
+  if grep -q '# ultra-ui apps' "$HERDR_CONFIG"; then
+    log "atalhos por app ja presentes"
+  else
+    backup "$HERDR_CONFIG"
+    {
+      echo
+      echo '# ultra-ui apps'
+      "$BIN" install-keys
+    } >> "$HERDR_CONFIG"
+    log "atalhos por app adicionados"
+  fi
+  herdr config check || true
+  herdr server reload-config >/dev/null 2>&1 || true
+fi
+
+# 6. foot: Super+C / Super+V (adiciona as teclas nas linhas existentes)
 if [[ -f $FOOT_CONFIG ]]; then
   if grep -q 'ultra-ui-super' "$FOOT_CONFIG"; then
     log "foot: atalhos ja presentes"
@@ -90,7 +107,7 @@ if [[ -f $FOOT_CONFIG ]]; then
   fi
 fi
 
-# 6. Hyprland: Super+setas alternam abas (substitui o foco de janela)
+# 7. Hyprland: Super+setas alternam abas (substitui o foco de janela)
 HYPR_BINDINGS="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/bindings.lua"
 if [[ -f $HYPR_BINDINGS ]]; then
   if grep -q 'UltraUI: aba anterior' "$HYPR_BINDINGS"; then

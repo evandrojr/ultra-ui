@@ -17,6 +17,8 @@ type App struct {
 	Floating *bool `json:"floating,omitempty"`
 	// Mode: "native" (padrao) ou "xpra" (roda sob Xpra).
 	Mode string `json:"mode,omitempty"`
+	// Key e a tecla do atalho prefix+shift+<key> (opcional).
+	Key string `json:"key,omitempty"`
 }
 
 // Config sao as preferencias persistidas em <config-dir>/ultra-ui.json.
@@ -63,6 +65,15 @@ func Default() Config {
 	add("lazygit", "lazygit", "lazygit", "lazygit")
 	if _, err := exec.LookPath("xterm"); err == nil {
 		cfg.Apps["xterm"] = App{Label: "XTerm (xpra)", Command: []string{"xterm"}, WindowClass: "XTerm", Mode: "xpra"}
+	}
+	for id, key := range map[string]string{
+		"files": "f", "vscode": "v", "omawrite": "m", "xterm": "t",
+		"btop": "b", "imv": "i", "lazygit": "l",
+	} {
+		if app, ok := cfg.Apps[id]; ok {
+			app.Key = key
+			cfg.Apps[id] = app
+		}
 	}
 	return cfg
 }
@@ -114,6 +125,14 @@ func Load(dir string) (Config, error) {
 		cfg.Anchor = *onDisk.Anchor
 	}
 	for id, app := range onDisk.Apps {
+		if def, ok := cfg.Apps[id]; ok {
+			if app.Key == "" {
+				app.Key = def.Key
+			}
+			if app.Mode == "" {
+				app.Mode = def.Mode
+			}
+		}
 		cfg.Apps[id] = app
 	}
 	return cfg, nil
