@@ -92,6 +92,13 @@ com fallback para a forma legada. O server do herdr não tem
 `HYPRLAND_INSTANCE_SIGNATURE`; o plugin descobre a instância em
 `$XDG_RUNTIME_DIR/hypr` e injeta no subprocess.
 
+## Alt+setas e a GUI
+
+O `Alt+←/→` é vinculado **no Hyprland** (`~/.config/hypr/bindings.lua`), não
+só no herdr: o compositor engole a tecla e roda `ultra-ui tab prev|next`, que
+foca a aba do herdr. Assim a janela gráfica focada **não** interpreta o atalho —
+ele continua alternando abas.
+
 ## Próximos passos
 
 1. Camada de compatibilidade do dispatch (acima).

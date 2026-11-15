@@ -318,6 +318,34 @@ func (s *Service) DetachCurrent() error {
 	return nil
 }
 
+// SwitchTab foca a aba anterior (dir < 0) ou proxima (dir > 0) do workspace.
+func (s *Service) SwitchTab(dir int) error {
+	wsID := herdr.EnvWorkspaceID()
+	if wsID == "" {
+		var err error
+		wsID, err = s.currentWorkspaceID()
+		if err != nil {
+			return err
+		}
+	}
+	tabs, err := herdr.Tabs(wsID)
+	if err != nil {
+		return err
+	}
+	if len(tabs) == 0 {
+		return fmt.Errorf("nenhuma aba no workspace")
+	}
+	current := 0
+	for i, t := range tabs {
+		if t.Focused {
+			current = i
+			break
+		}
+	}
+	next := (current + dir + len(tabs)) % len(tabs)
+	return herdr.TabFocus(tabs[next].TabID)
+}
+
 // HandleEvent processa os hooks do herdr.
 func (s *Service) HandleEvent(event string) error {
 	debug := os.Getenv("ULTRA_UI_DEBUG") != ""

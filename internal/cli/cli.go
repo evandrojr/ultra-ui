@@ -52,6 +52,18 @@ func Run(args []string) int {
 		return wrap(func() error { return mustService().HandleEvent(rest[0]) })
 	case "gui":
 		return runGUI(rest)
+	case "tab":
+		if len(rest) == 0 {
+			return fail("tab: prev|next")
+		}
+		switch rest[0] {
+		case "prev":
+			return wrap(func() error { return mustService().SwitchTab(-1) })
+		case "next":
+			return wrap(func() error { return mustService().SwitchTab(1) })
+		default:
+			return fail("tab: prev|next")
+		}
 	case "status":
 		return runStatus()
 	case "doctor":
