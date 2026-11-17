@@ -53,6 +53,7 @@ Seed Omarchy (inalterado) +:
 |---|---|
 | `prefix+shift+g` | seletor de apps GUI |
 | `prefix+shift+x` | fechar a GUI da aba atual |
+| `prefix+/` | busca rápida de workspaces: digita o nome e vai direto |
 | `Super+C` / `Super+V` | copiar / colar |
 | `Alt+←` / `Alt+→` | aba anterior / próxima |
 | `Alt+Shift+←` / `→` | mover a aba |

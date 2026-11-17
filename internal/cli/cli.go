@@ -14,6 +14,7 @@ import (
 	"ultra-ui/internal/herdr"
 	"ultra-ui/internal/hypr"
 	"ultra-ui/internal/state"
+	"ultra-ui/internal/workspaces"
 )
 
 const usage = `ultra-ui — abas GUI do Hyprland dentro do herdr
@@ -27,6 +28,9 @@ Uso:
   ultra-ui gui pick                    abre o seletor de apps
   ultra-ui gui list                    lista as abas GUI
   ultra-ui gui sentinel <tab> <addr>   sentinela do painel (uso interno)
+  ultra-ui tab prev|next               aba anterior / proxima
+  ultra-ui workspace prev|next         workspace anterior / proximo
+  ultra-ui workspace pick              busca rapida de workspaces (prefix+/)
   ultra-ui status                      mostra o mapeamento atual
   ultra-ui doctor                      verifica dependencias
   ultra-ui clipboard copy|paste        copia/cola via clipboard do Wayland
@@ -66,15 +70,23 @@ func Run(args []string) int {
 		}
 	case "workspace":
 		if len(rest) == 0 {
-			return fail("workspace: prev|next")
+			return fail("workspace: prev|next|pick")
 		}
 		switch rest[0] {
 		case "prev":
 			return wrap(func() error { return mustService().SwitchWorkspace(-1) })
 		case "next":
 			return wrap(func() error { return mustService().SwitchWorkspace(1) })
+		case "pick":
+			return wrap(func() error {
+				id, err := workspaces.Pick()
+				if err != nil {
+					return err
+				}
+				return herdr.WorkspaceFocus(id)
+			})
 		default:
-			return fail("workspace: prev|next")
+			return fail("workspace: prev|next|pick")
 		}
 	case "install-keys":
 		return runInstallKeys()

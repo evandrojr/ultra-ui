@@ -14,5 +14,6 @@ case "$*" in
   "pane send-keys"*) echo '{"result":{"type":"pane_command","ok":true}}' ;;
   "tab close"*) echo '{"result":{"type":"tab_closed","ok":true}}' ;;
   "tab focus"*) echo '{"result":{"type":"tab_focused","ok":true}}' ;;
+  "workspace focus"*) echo '{"result":{"type":"workspace_focused","ok":true}}' ;;
   *) echo '{}' ;;
 esac

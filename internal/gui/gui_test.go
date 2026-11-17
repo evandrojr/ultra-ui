@@ -83,6 +83,7 @@ case "$*" in
   "pane send-keys"*) echo '{"result":{"type":"pane_command","ok":true}}' ;;
   "tab close"*) echo '{"result":{"type":"tab_closed","ok":true}}' ;;
   "tab focus"*) echo '{"result":{"type":"tab_focused","ok":true}}' ;;
+  "workspace focus"*) echo '{"result":{"type":"workspace_focused","ok":true}}' ;;
   *) echo '{}' ;;
 esac
 `
@@ -96,6 +97,9 @@ func setup(t *testing.T) (*Service, string) {
 	dir := t.TempDir()
 	t.Setenv("ULTRA_UI_HYPRCTL", filepath.Join(dir, "hyprctl"))
 	t.Setenv("ULTRA_UI_HERDR", filepath.Join(dir, "herdr"))
+	// O ambiente real (pane do herdr) injeta HERDR_BIN_PATH; sem limpa-lo os
+	// testes batem no herdr real em vez do mock.
+	t.Setenv("HERDR_BIN_PATH", "")
 	t.Setenv("ULTRA_UI_STATE_DIR", filepath.Join(dir, "state"))
 	t.Setenv("ULTRA_UI_CONFIG_DIR", dir)
 	t.Setenv("HERDR_WORKSPACE_ID", "w19")

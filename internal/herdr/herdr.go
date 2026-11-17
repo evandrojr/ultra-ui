@@ -50,6 +50,7 @@ func Available() bool {
 // WorkspaceSummary e um workspace do herdr.
 type WorkspaceSummary struct {
 	WorkspaceID string `json:"workspace_id"`
+	Number      int    `json:"number"`
 	Label       string `json:"label"`
 	Focused     bool   `json:"focused"`
 	ActiveTabID string `json:"active_tab_id"`
@@ -81,6 +82,12 @@ func Workspaces() ([]WorkspaceSummary, error) {
 		return nil, fmt.Errorf("herdr workspace list: %w", err)
 	}
 	return r.Result.Workspaces, nil
+}
+
+// WorkspaceFocus foca um workspace.
+func WorkspaceFocus(workspaceID string) error {
+	_, err := run("workspace", "focus", workspaceID)
+	return err
 }
 
 // FocusedWorkspaceID devolve o workspace focado.

@@ -132,6 +132,7 @@ prefix+shift+p / n / alt+↑/↓  workspace anterior / próximo
 Adicionais do ultra-ui:
 
 ```
+prefix+/          ultra-ui workspace pick  busca rapida de workspaces
 prefix+shift+g   ultra-ui gui pick    abre o seletor de apps GUI
 prefix+shift+x   ultra-ui gui close   fecha a GUI da aba atual
 super+c          copiar (clipboard universal)
@@ -163,6 +164,7 @@ ultra-ui gui detach              desacopla a GUI (aba vira shell)
 ultra-ui gui pick                seletor de apps
 ultra-ui gui list                lista abas GUI
 ultra-ui status                  mapeamento atual
+ultra-ui workspace pick          busca rapida de workspaces (prefix+/)
 ultra-ui doctor                  verifica herdr/hyprctl/wl-clipboard/foot
 ultra-ui clipboard copy|paste
 ```

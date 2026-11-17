@@ -42,6 +42,7 @@ Seed do Omarchy (inalterado) + ultra-ui:
 |---|---|
 | `prefix+shift+g` | abrir seletor de apps GUI |
 | `prefix+shift+x` | fechar a GUI da aba atual |
+| `prefix+/` | busca rápida de workspaces: digitar o nome e ir direto |
 | `Super+C` / `Super+V` | copiar / colar |
 | `Alt+←` / `Alt+→` | aba anterior / próxima (GUI ou terminal) |
 | `Alt+Shift+←` / `→` | mover a aba |
@@ -60,6 +61,7 @@ ultra-ui gui list        # abas GUI ativas
 ultra-ui gui pick        # seletor de apps
 ultra-ui gui open --app browser
 ultra-ui gui close
+ultra-ui workspace pick  # busca rapida de workspaces
 ultra-ui status
 ```
 

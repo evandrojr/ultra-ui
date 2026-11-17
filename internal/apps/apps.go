@@ -6,12 +6,11 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"sort"
-	"strconv"
 	"strings"
 
 	"ultra-ui/internal/config"
+	"ultra-ui/internal/menu"
 )
 
 // Entry e um item do catalogo.
@@ -45,58 +44,33 @@ func List(cfg config.Config) []Entry {
 	return entries
 }
 
-// env devolve o ambiente para o seletor grafico. O server do herdr nao tem
-// WAYLAND_DISPLAY; descobrimos o socket do compositor.
-func env() []string {
-	env := os.Environ()
-	if os.Getenv("WAYLAND_DISPLAY") == "" {
-		runtime := os.Getenv("XDG_RUNTIME_DIR")
-		if runtime == "" {
-			runtime = "/run/user/" + strconv.Itoa(os.Getuid())
-		}
-		matches, _ := filepath.Glob(filepath.Join(runtime, "wayland-*"))
-		if len(matches) > 0 {
-			env = append(env, "WAYLAND_DISPLAY="+filepath.Base(matches[0]))
-		}
-	}
-	if os.Getenv("OMARCHY_PATH") == "" {
-		env = append(env, "OMARCHY_PATH=/usr/share/omarchy")
-	}
-	return env
-}
-
 // Pick abre um seletor interativo e devolve o ID escolhido.
 func Pick(cfg config.Config) (string, error) {
 	entries := List(cfg)
 	if len(entries) == 0 {
 		return "", fmt.Errorf("nenhum app configurado")
 	}
-	if path, err := exec.LookPath("omarchy-menu-select"); err == nil {
-		args := []string{"Abrir app grafico"}
+	if menu.Available() {
+		options := make([]string, 0, len(entries))
 		for _, e := range entries {
-			args = append(args, e.Label)
+			options = append(options, e.Label)
 		}
-		cmd := exec.Command(path, args...)
-		cmd.Env = env()
-		cmd.Stdin = os.Stdin
-		cmd.Stderr = os.Stderr
-		out, err := cmd.Output()
-		if err == nil {
-			chosen := strings.TrimSpace(string(out))
-			for _, e := range entries {
-				if e.Label == chosen {
-					return e.ID, nil
-				}
-			}
-			// Alguns menus devolvem o indice ou texto extra; tenta casar por prefixo.
-			for _, e := range entries {
-				if strings.HasPrefix(chosen, e.Label) {
-					return e.ID, nil
-				}
-			}
-			return "", fmt.Errorf("selecao invalida: %q", chosen)
+		chosen, err := menu.Select("Abrir app grafico", options)
+		if err != nil {
+			return "", err
 		}
-		return "", fmt.Errorf("menu indisponivel (%v); use --app", err)
+		for _, e := range entries {
+			if e.Label == chosen {
+				return e.ID, nil
+			}
+		}
+		// Alguns menus devolvem o indice ou texto extra; tenta casar por prefixo.
+		for _, e := range entries {
+			if strings.HasPrefix(chosen, e.Label) {
+				return e.ID, nil
+			}
+		}
+		return "", fmt.Errorf("selecao invalida: %q", chosen)
 	}
 	return pickTerminal(entries)
 }

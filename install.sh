@@ -93,6 +93,26 @@ if [[ -f $HERDR_CONFIG ]]; then
   herdr server reload-config >/dev/null 2>&1 || true
 fi
 
+# 4b. Busca rapida de workspaces (prefix+/)
+if [[ -f $HERDR_CONFIG ]]; then
+  if grep -q 'ultra-ui workspace pick' "$HERDR_CONFIG"; then
+    log "tecla de busca de workspaces ja presente"
+  else
+    backup "$HERDR_CONFIG"
+    cat >> "$HERDR_CONFIG" <<'EOF'
+
+# ultra-ui: busca rapida de workspaces
+[[keys.command]]
+key = "prefix+/"
+type = "shell"
+command = "ultra-ui workspace pick"
+EOF
+    log "tecla de busca de workspaces adicionada"
+  fi
+  herdr config check || true
+  herdr server reload-config >/dev/null 2>&1 || true
+fi
+
 # 6. foot: Super+C / Super+V (adiciona as teclas nas linhas existentes)
 if [[ -f $FOOT_CONFIG ]]; then
   if grep -q 'ultra-ui-super' "$FOOT_CONFIG"; then

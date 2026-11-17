@@ -1,0 +1,7 @@
+{"id":"cli:workspace:list","result":{"type":"workspace_list","workspaces":[
+ {"workspace_id":"w5","number":1,"label":"torrentflix","focused":false,"tab_count":3,"active_tab_id":"w5:t3"},
+ {"workspace_id":"w17","number":2,"label":"centro-de-controle","focused":false,"tab_count":7,"active_tab_id":"w17:t1"},
+ {"workspace_id":"wF","number":6,"label":"go-proxy-serprollm","focused":false,"tab_count":1,"active_tab_id":"wF:t1"},
+ {"workspace_id":"w1D","number":30,"label":"go-proxy-serprollm","focused":false,"tab_count":1,"active_tab_id":"w1D:t1"},
+ {"workspace_id":"w19","number":25,"label":"ultra-ui","focused":true,"tab_count":1,"active_tab_id":"w19:t1"}
+]}}
